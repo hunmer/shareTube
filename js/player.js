@@ -80,6 +80,11 @@ var g_player = {
         initTitle();
         g_player.playVideo();
         g_player.setPlaybackRate(_GET['speed'] || 1);
+        setTimeout(() => {
+            if(g_player.isPause()){
+                g_player.playVideo();
+            }
+        }, 2000);
     },
 
     onPlayerReady: (event) => {
@@ -195,6 +200,9 @@ var g_player = {
                 g_player.dom.pause();
             }
         }
+    },
+    isPause: () => {
+        return g_player.obj ? g_player.obj.getPlayerState() == 2 : g_player.dom.paused;
     },
     pause: () => {
         if (g_player.obj) {

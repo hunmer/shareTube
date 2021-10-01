@@ -140,15 +140,16 @@
      }
      g_id = id;
      var data = {};
-     if (g_data[id]) {
-         data = g_data[id];
-     } else
+     
      if (_GET['data']) {
          data = JSON.parse(window.decodeURIComponent(atob(_GET['data'])));
          g_data[id] = data;
          local_saveJson('datas', g_data);
          $('[data-action="test"]').addClass('btn-primary');
          window.history.pushState(null, null, window.location.href.split("?")[0]);
+     }else
+     if (g_data[id]) {
+         data = g_data[id];
      }
 
      if (data) {
