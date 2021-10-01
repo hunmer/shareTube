@@ -84,7 +84,7 @@ var g_player = {
             if(g_player.isPause()){
                 g_player.playVideo();
             }
-        }, 2000);
+        }, 4000);
     },
 
     onPlayerReady: (event) => {
@@ -133,8 +133,8 @@ var g_player = {
             }
 
         }
-         if(run && g_cache.end){
-            setProgress(parseInt((1- now / g_cache.end) * 100));
+         if(run && g_cache.range){
+            setProgress(parseInt((g_cache.range.end - now) / g_cache.range.length * 100));
         }
 
         for (var start in g_cache.subTitlte) {
@@ -209,7 +209,7 @@ var g_player = {
         }
     },
     isPause: () => {
-        return g_player.obj ? g_player.obj.getPlayerState() == 2 : g_player.dom.paused;
+        return g_player.obj ? g_player.obj.getPlayerState() != 1 : g_player.dom.paused;
     },
     pause: () => {
         if (g_player.obj) {
