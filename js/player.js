@@ -107,6 +107,7 @@ var g_player = {
         g_cache.timer = setInterval(g_player.timeupdate, 300);
     },
     timeupdate: () => {
+       
         var data =g_player.getPlayerData();;
         if(data.author != '' && g_player.data.author == ''){
              g_player.data = {
@@ -119,7 +120,9 @@ var g_player = {
 
 
         var now = g_player.getCurrentTime();
+        var run = $('[data-action="test"]').hasClass('btn-primary');
         if($('[data-action="play"]').hasClass('btn-secondary')){
+             
             var min = getStart();
             if(min > 0 && now < min){
                 return g_player.seekTo(min);
@@ -128,6 +131,10 @@ var g_player = {
             if(max > 0 && now > max){
                 return g_player.seekTo(min);
             }
+
+        }
+         if(run && g_cache.end){
+            setProgress(parseInt((1- now / g_cache.end) * 100));
         }
 
         for (var start in g_cache.subTitlte) {
@@ -139,7 +146,7 @@ var g_player = {
                 return;
             }
         }
-         if($('[data-action="test"]').hasClass('btn-primary')){
+         if(run){
             next();
             return;      
         }

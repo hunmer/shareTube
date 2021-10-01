@@ -275,6 +275,7 @@
              var d = $(dom);
              var start = d.attr('data-start');
              var end = d.attr('data-end');
+             g_cache.end = parseInt(end);
              $('#input_start').val(start);
              $('#input_end').val(end);
              $('#input_text').val(d.find('.title').val());
