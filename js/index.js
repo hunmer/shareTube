@@ -146,7 +146,7 @@
          g_data[id] = data;
          local_saveJson('datas', g_data);
          $('[data-action="test"]').addClass('btn-primary');
-         window.history.pushState(null, null, window.location.href.split("?")[0]);
+         //window.history.pushState(null, null, window.location.href.split("?")[0]);
      }else
      if (g_data[id]) {
          data = g_data[id];
