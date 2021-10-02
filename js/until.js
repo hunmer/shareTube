@@ -130,8 +130,8 @@ function shareCard(url) {
                     <div class="modal-html">
                         <div class="mw-full p-10">
 
-                          <div class="card p-0 position-relative"> 
-                            <div id="qrcode" style="position: absolute;right: 10px;bottom: 5px;"></div>
+                          <div class="card p-0"> 
+                            
                           <div class="position-relative">
                             <img id='share_cover' src="`+ g_api+'image.php?url='+btoa('https://i.ytimg.com/vi/'+g_id+'/mqdefault.jpg')+`" class="img-fluid rounded-top w-full">
                            
@@ -139,11 +139,12 @@ function shareCard(url) {
                              <span style="position: absolute;right: 10px;top: 10px;" class="badge badge-primary">
                               <i class="fa fa-clock-o text-white mr-10" aria-hidden="true"></i>{all}
                             </span>
-                            <div class="content" contenteditable=true>
+                            <div class="content">
                               <h2 class="content-title text-center">
                                 ` + g_player.data.title + `
                               </h2>
-                              <div class="content">
+                              <div class="content position-relative" style="min-height: 128px">
+                                 <div id="qrcode" style="position: absolute;right: 10px;bottom: 5px;"></div>
         `;
         var i = 0;
         var t;
@@ -153,7 +154,7 @@ function shareCard(url) {
             var d = g_cache.subTitlte[start];
             t = parseInt(d.end-start);
             all += t;
-            h += `<div style="display: inline-flex"><strong>` + i + '.' + d.title + `</strong><br />` + d.desc + `<span class="badge ml-10">`+getTime(t)+`</span></div><hr />`;
+            h += `<div style="display: inline-flex" contenteditable=true><strong>` + i + '.' + d.title + `</strong><br />` + d.desc + `<span class="badge ml-10">`+getTime(t)+`</span></div><hr />`;
         }
         h += `</div></div></div></div><textarea class="form-control" id="input_copy" disbaled>` + url + `</textarea><div class="btn-group w-full" role="group"><button class="form-control bg-primary btn-block" onclick="generatorImage()">download</button><button class="form-control bg-primary btn-block" onclick="$('#input_copy').select();document.execCommand('copy');halfmoon.toggleModal('modal-copy');">copy</button></div></div></div></div></div>`;
         $(h.replace('{all}', getTime(all))).appendTo('body');

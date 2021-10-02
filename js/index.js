@@ -302,6 +302,7 @@
              var url = prompt('input url', 'https://www.youtube.com/watch?v=v22JJP1GBAI');
              if (url != '') {
                  var id = cutString(url + '&', '?v=', '&');
+                 if (id == '') id = cutString(url + '&', 'youtu.be/', '&');
                  if (id == '') id = url;
                  onYouTubeIframeAPIReady(id);
              }
