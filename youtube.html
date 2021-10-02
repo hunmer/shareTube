@@ -20,10 +20,49 @@ html {
     background-color: red;
     width: 0%;
 }
+
+#ftb {
+    width: 200px;
+    position: fixed;
+    z-index: 99999;
+    bottom: 10%;
+    right: 0;
+}
+
+#ftb ul {
+    background-color: white;
+    list-style: auto;
+    border-radius: 15px;
+}
+
+#ftb li {
+    padding: 10px;
+
+}
+
+#ftb_btn {
+    margin: 0 auto;
+    text-align: center;
+    height: 50px;
+    width: 50px;
+    border-radius: 50%;
+    background-color: #1890ff;
+}
+
+#ftb_btn b {
+    font-size: 2rem;
+    text-align: center;
+    line-height: 50px;
+    color: white;
+}
 </style>
 
 <body>
-    <div id='progress'></div>
+    <div id='ftb'>
+        <ul hidden=true></ul>
+        <div id="ftb_btn" onclick="var d = document.querySelector('ul');d.hidden = !d.hidden;"><b>+</b></div>
+    </div>
+    <div id='progress' hidden=true></div>
     <div id="player"></div>
     <script src="js/iframe_api.js"></script>
     <script>
@@ -32,10 +71,12 @@ html {
     var g_player;
     var g_cache = {
         timer: 0,
+        ended: false,
         last: 0,
         subTitlte: {},
     };
     var g_index = -1;
+    var progress = document.querySelector('#progress');
 
     function onYouTubeIframeAPIReady() {
         // https://www.youtube.com/watch?v=DD1JfUPaPp4
@@ -67,7 +108,18 @@ html {
     }
 
     function initSubtitle(id, json) {
-
+        for (var start in g_cache.subTitlte) {
+            var d = g_cache.subTitlte[start];
+            var li = document.createElement('li');
+            li.innerHTML = d.title;
+            li.title = d.desc;
+            li.setAttribute('start', start)
+            li.onclick = function(event) {
+                g_player.seekTo(this.getAttribute('start'));
+                g_player.playVideo();
+            }
+            document.querySelector('ul').append(li);
+        }
         g_player = new YT.Player('player', {
             height: '100%',
             width: '100%',
@@ -75,10 +127,10 @@ html {
             playerVars: { 'autoplay': 1, 'controls': 1 },
             events: {
                 'onReady': () => {
-                     g_player.setPlaybackRate(Number(_GET['s']) || 1);
+                    g_player.setPlaybackRate(Number(_GET['s']) || 1);
                     document.title = g_player.getVideoData().title;
                     setTimeout(() => {
-                        if (g_player.obj.getPlayerState() == -1) {
+                        if (g_player.getPlayerState() == -1) {
                             g_player.playVideo();
                         }
                     }, 3000);
@@ -94,23 +146,30 @@ html {
 
         var now = g_player.getCurrentTime();
         if (g_cache.range) {
-            document.querySelector('#progress').style.width = parseInt((g_cache.range.end - now) / g_cache.range.length * 100) + '%';
+            progress.hidden = false;
+            progress.style.width = parseInt((g_cache.range.end - now) / g_cache.range.length * 100) + '%';
         }
-
+        var i = 0;
         for (var start in g_cache.subTitlte) {
             var d = g_cache.subTitlte[start];
             if (now >= start && now < d.end) {
                 if (g_cache.last == start) return;
                 g_cache.last = start;
+                g_index = i;
                 return;
             }
+            i++;
         }
-        next();
+        progress.hidden = true;
+        if (!g_cache.ended) {
+            next();
+        }
     }
 
     function next() {
         var times = Object.keys(g_cache.subTitlte);
-        if (g_index == times.length - 1) {
+        if (g_index == times.length - 1 && !g_cache.ended) {
+            g_cache.ended = true;
             g_player.pauseVideo();
             return;
         }
