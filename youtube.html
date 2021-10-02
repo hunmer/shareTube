@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+<style type="text/css">
+body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+}
+
+html {
+    width: 100%;
+    height: 100%;
+}
+
+#progress {
+    position: fixed;
+    z-index: 99999;
+    top: 0px;
+    height: 5px;
+    background-color: red;
+    width: 0%;
+}
+</style>
+
+<body>
+    <div id='progress'></div>
+    <div id="player"></div>
+    <script src="js/iframe_api.js"></script>
+    <script>
+    var g_api = './php/';
+    var _GET = getGETArray();
+    var g_player;
+    var g_cache = {
+        timer: 0,
+        last: 0,
+        subTitlte: {},
+    };
+    var g_index = -1;
+
+    function onYouTubeIframeAPIReady() {
+        // https://www.youtube.com/watch?v=DD1JfUPaPp4
+        g_id = _GET['i'];
+        var data = {};
+        if (_GET['r']) {
+            loadData(window.decodeURIComponent(_GET['r']));
+        } else
+        if (_GET['d']) {
+            ajax({
+                url: g_api + 'api.php',
+                dataType: 'json',
+                data: {
+                    key: _GET['d']
+                },
+                success: (json) => {
+                    json = JSON.parse(json);
+                    loadData(json.data);
+                }
+            })
+
+        }
+    }
+
+    function loadData(data) {
+        data = JSON.parse(data);
+        g_cache.subTitlte = data;
+        initSubtitle(g_id, data);
+    }
+
+    function initSubtitle(id, json) {
+
+        g_player = new YT.Player('player', {
+            height: '100%',
+            width: '100%',
+            videoId: id,
+            playerVars: { 'autoplay': 1, 'controls': 1 },
+            events: {
+                'onReady': () => {
+                     g_player.setPlaybackRate(Number(_GET['s']) || 1);
+                    document.title = g_player.getVideoData().title;
+                    setTimeout(() => {
+                        if (g_player.obj.getPlayerState() == -1) {
+                            g_player.playVideo();
+                        }
+                    }, 3000);
+                    g_cache.timer = setInterval(timeupdate, 300);
+                    next();
+                }
+            }
+        });
+
+    }
+
+    function timeupdate() {
+
+        var now = g_player.getCurrentTime();
+        if (g_cache.range) {
+            document.querySelector('#progress').style.width = parseInt((g_cache.range.end - now) / g_cache.range.length * 100) + '%';
+        }
+
+        for (var start in g_cache.subTitlte) {
+            var d = g_cache.subTitlte[start];
+            if (now >= start && now < d.end) {
+                if (g_cache.last == start) return;
+                g_cache.last = start;
+                return;
+            }
+        }
+        next();
+    }
+
+    function next() {
+        var times = Object.keys(g_cache.subTitlte);
+        if (g_index == times.length - 1) {
+            g_player.pauseVideo();
+            return;
+        }
+        g_index = g_index + 1;
+        var start = times[g_index];
+        var d = g_cache.subTitlte[start];
+        g_cache.range = {
+            start: start,
+            end: d.end,
+            length: d.end - start
+        }
+        g_player.seekTo(start);
+        g_player.playVideo();
+    }
+
+    function getGETArray() {
+        var a_result = [],
+            a_exp;
+        var a_params = window.location.search.slice(1).split('&');
+        for (var k in a_params) {
+            a_exp = a_params[k].split('=');
+            if (a_exp.length > 1) {
+                a_result[a_exp[0]] = decodeURIComponent(a_exp[1]);
+            }
+        }
+        return a_result;
+    }
+
+    function ajax(options) {
+        options = options || {};
+        options.type = (options.type || 'GET').toUpperCase();
+        options.dataType = options.dataType || 'json';
+        params = formatParams(options.data);
+
+        //创建-第一步
+        var xhr;
+        //非IE6
+        if (window.XMLHttpRequest) {
+            xhr = new XMLHttpRequest();
+        } else {
+            //ie6及其以下版本浏览器
+            xhr = ActiveXObject('Microsoft.XMLHTTP');
+        }
+
+        //接收-第三步
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState == 4) {
+                var status = xhr.status;
+                if (status >= 200 && status < 300) {
+                    options.success && options.success(xhr.responseText, xhr.responseXML);
+                } else {
+                    options.error && options.error(status);
+                }
+            }
+        }
+
+        //连接和发送-第二步
+        if (options.type == 'GET') {
+            xhr.open('GET', options.url + '?' + params, true);
+            xhr.send(null);
+        } else if (options.type == 'POST') {
+            xhr.open('POST', options.url, true);
+            //设置表单提交时的内容类型
+            xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+            xhr.send(params);
+        }
+        return xhr;
+    }
+
+    //格式化参数
+    function formatParams(data) {
+        var arr = [];
+        for (var name in data) {
+            arr.push(encodeURIComponent(name) + '=' + encodeURIComponent(data[name]));
+        }
+        return arr.join('&');
+    }
+    </script>
+</body>
+
+</html>

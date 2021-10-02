@@ -11,8 +11,8 @@ var g_config = local_readJson('config', {
     audioMode: false,
     darkMode: false,
 });
-var g_data = local_readJson('datas', {
-});
+var g_data = local_readJson('datas', {});
+
 function local_saveJson(key, data) {
     if (window.localStorage) {
         key = g_localKey + key;
@@ -116,3 +116,126 @@ function copyText(text) {
     }
     halfmoon.toggleModal('modal-copy');
 }
+
+function shareCard(url) {
+    if (!$('#modal-card').length) {
+        var h = `
+        <div class="modal" id="modal-card" tabindex="-1" role="dialog" style="z-index: 99999;">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content modal-content-media w-500">
+                    <a class="close" role="button" aria-label="Close" onclick="halfmoon.toggleModal('modal-card');">
+                        <span aria-hidden="true">&times;</span>
+                    </a>
+                    <h5 class="modal-title text-center">share</h5>
+                    <div class="modal-html">
+                        <div class="mw-full p-10">
+
+                          <div class="card p-0 position-relative"> 
+                            <div id="qrcode" style="position: absolute;right: 10px;bottom: 5px;"></div>
+                          <div class="position-relative">
+                            <img id='share_cover' src="`+ g_api+'image.php?url='+btoa('https://i.ytimg.com/vi/'+g_id+'/mqdefault.jpg')+`" class="img-fluid rounded-top w-full">
+                           
+                            </div>
+                             <span style="position: absolute;right: 10px;top: 10px;" class="badge badge-primary">
+                              <i class="fa fa-clock-o text-white mr-10" aria-hidden="true"></i>{all}
+                            </span>
+                            <div class="content" contenteditable=true>
+                              <h2 class="content-title text-center">
+                                ` + g_player.data.title + `
+                              </h2>
+                              <div class="content">
+        `;
+        var i = 0;
+        var t;
+        var all = 0;
+        for (var start in g_cache.subTitlte) {
+            i++;
+            var d = g_cache.subTitlte[start];
+            t = parseInt(d.end-start);
+            all += t;
+            h += `<div style="display: inline-flex"><strong>` + i + '.' + d.title + `</strong><br />` + d.desc + `<span class="badge ml-10">`+getTime(t)+`</span></div><hr />`;
+        }
+        h += `</div></div></div></div><textarea class="form-control" id="input_copy" disbaled>` + url + `</textarea><div class="btn-group w-full" role="group"><button class="form-control bg-primary btn-block" onclick="generatorImage()">download</button><button class="form-control bg-primary btn-block" onclick="$('#input_copy').select();document.execCommand('copy');halfmoon.toggleModal('modal-copy');">copy</button></div></div></div></div></div>`;
+        $(h.replace('{all}', getTime(all))).appendTo('body');
+
+        new QRCode("qrcode", {
+            text: url,
+            width: 128,
+            height: 128,
+            colorDark : "#000000",
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.H
+        });
+    }
+    halfmoon.toggleModal('modal-card');
+}
+
+function getShareurl(){
+    var base = location.protocol + '//' + location.host + '/shareTube/youtube.html?i=' + g_id+'&s='+g_player.getPlaybackRate();
+    var data = window.encodeURIComponent(JSON.stringify(g_cache.subTitlte));
+    if(data.length <= 100){
+        return shareCard(base+'&r'+data);
+    }
+    $.ajax({
+        url: g_api+'api.php',
+        type: 'POST',
+        dataType: 'json',
+        data: {data: JSON.stringify(g_cache.subTitlte)},
+    })
+    .done(function(data) {
+        shareCard(base+'&d='+data.key);
+    })
+    .fail(function() {
+    })
+    .always(function() {
+    });
+}
+
+function getTime(s) {
+    s = Number(s);
+    var h = 0,
+        m = 0;
+    if (s >= 3600) {
+        h = parseInt(s / 3600);
+        s %= 3600;
+    }
+    if (s >= 60) {
+        m = parseInt(s / 60);
+        s %= 60;
+    }
+    return _s1(h, ':') + _s(m, ':') + _s(s);
+}
+
+
+function _s1(s, j = '') {
+    s = parseInt(s);
+    return (s == 0 ? '' : (s < 10 ? '0' + s : s) + j);
+}
+
+
+
+function _s(i, j = '') {
+    return (i < 10 ? '0' + i : i) + j;
+}
+
+function generatorImage(){
+    // var img = $('#share_cover')[0];
+    // img.useCORS=true;//解决跨域
+    // img.crossOrigin="Anonymous";//解决跨域
+    toastPAlert('downloading...', 'alert-secondary');
+     var dark = $('.dark-mode').length;
+      html2canvas($('#modal-card .modal-html .mw-full')[0], {
+            backgroundColor: dark ? '#000000d9' : '#fff',
+            useCORS: true,
+        }).then(function(canvas) {
+             downloadImg(canvas.toDataURL(), g_player.data.title);
+        });
+}
+
+ function downloadImg(url, fileName){
+        var a = document.createElement('a');
+        var event = new MouseEvent('click');
+        a.download = fileName;
+        a.href = url;
+        a.dispatchEvent(event);
+    }

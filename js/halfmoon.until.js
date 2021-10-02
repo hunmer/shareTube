@@ -14,7 +14,6 @@ halfmoon.toggleSidebar = () => {
 halfmoon._toggleModal= halfmoon.toggleModal;
 halfmoon.toggleModal = (id) => {
     halfmoon._toggleModal(id);
-    startVibrate(50);
 }
 
 halfmoon._toggleDarkMode= halfmoon.toggleDarkMode;

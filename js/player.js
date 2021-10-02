@@ -79,7 +79,7 @@ var g_player = {
         $('input[type=number]').prop('max', g_player.getDuration());
         initTitle();
         g_player.playVideo();
-        g_player.setPlaybackRate(_GET['speed'] || 1);
+        g_player.setPlaybackRate(_GET['s'] || 1);
         setTimeout(() => {
             if(g_player.isPause()){
                 g_player.playVideo();
@@ -108,7 +108,7 @@ var g_player = {
     },
     timeupdate: () => {
        
-        var data =g_player.getPlayerData();;
+        var data =g_player.getPlayerData();
         if(data.author != '' && g_player.data.author == ''){
              g_player.data = {
                 title: data.title,
@@ -179,6 +179,7 @@ var g_player = {
     },
 
     playVideo: () => {
+       
         if (g_player.obj) {
             g_player.obj.playVideo();
         } else {

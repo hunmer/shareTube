@@ -102,6 +102,7 @@
  }
 
  function initSubtitle(id, json) {
+
      var h = ``;
      var i = 0;
      for (var start in json) {
@@ -130,31 +131,37 @@
      initHistory();
  }
 
+ function loadData(data) {
+     data = JSON.parse(data);
+     g_data[g_id] = data;
+     local_saveJson('datas', g_data);
+     $('[data-action="test"]').addClass('btn-primary');
+     initSubtitle(g_id, data);
+     //window.history.pushState(null, null, window.location.href.split("?")[0]);
+
+ }
+
  function onYouTubeIframeAPIReady(id) {
      // https://www.youtube.com/watch?v=DD1JfUPaPp4
      if (id == '' || id == undefined) {
-         id = _GET['id'] ? _GET['id'] : g_config.lastId;
+         id = _GET['i'] ? _GET['i'] : g_config.lastId;
      } else {
          g_config.lastId = id;
          local_saveJson('config', g_config);
      }
      g_id = id;
      var data = {};
-     
-     if (_GET['data']) {
-         data = JSON.parse(window.decodeURIComponent(atob(_GET['data'])));
-         g_data[id] = data;
-         local_saveJson('datas', g_data);
-         $('[data-action="test"]').addClass('btn-primary');
-         //window.history.pushState(null, null, window.location.href.split("?")[0]);
-     }else
+     if (_GET['r']) {
+         loadData(window.decodeURIComponent(_GET['r']));
+     } else
+     if (_GET['d']) {
+         $.getJSON(g_api + 'api.php?key=' + _GET['d'], function(json, textStatus) {
+             loadData(json.data);
+         });
+     } else
      if (g_data[id]) {
-         data = g_data[id];
-     }
-
-     if (data) {
-         g_cache.subTitlte = data;
-         initSubtitle(id, data);
+         g_cache.subTitlte = g_data[id];
+         initSubtitle(id, g_data[id]);
      }
      g_player.load(g_config.audioMode ? 'audio' : 'video', id);
  }
@@ -243,7 +250,7 @@
              deleteSelected(true);
              break;
          case 'share':
-             copyText(location.protocol + '//' + location.host + location.pathname + '?id=' + g_id + '&speed='+g_player.getPlaybackRate()+'&data=' + btoa(window.encodeURIComponent(JSON.stringify(g_cache.subTitlte))));
+            getShareurl();
              break;
          case 'save':
              g_data[g_id] = g_cache.subTitlte;
@@ -276,9 +283,9 @@
              var start = d.attr('data-start');
              var end = d.attr('data-end');
              g_cache.range = {
-                start: start,
-                end: end,
-                length: end - start
+                 start: start,
+                 end: end,
+                 length: end - start
              }
              $('#input_start').val(start);
              $('#input_end').val(end);
