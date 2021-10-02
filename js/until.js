@@ -2,6 +2,7 @@ String.prototype.replaceAll = function(s1, s2) {
     return this.replace(new RegExp(s1, "gm"), s2);
 }
 var g_api = './php/';
+var g_api = 'https://sharetube-api.glitch.me/';
 var _GET = getGETArray();
 var g_localKey = 'shareTube_';
 // 本地储存前缀
