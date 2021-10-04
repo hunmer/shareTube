@@ -8,11 +8,12 @@ var g_player = {
     init: () => {
 
     },
-    load: (type, id) => {
-        g_player.data= {
-        title: '',
-        author: ''
-    }
+    load: (type, id, callback) => {
+        g_cache.loaded[id] = false;
+        g_player.data = {
+            title: '',
+            author: ''
+        }
         g_player.type = type;
         g_player.destroy();
 
@@ -24,7 +25,11 @@ var g_player = {
                 videoId: id,
                 playerVars: { 'autoplay': 1, 'controls': 1 },
                 events: {
-                    'onReady': g_player.onPlayerReady,
+                    'onReady': (event) => {
+                        console.log('loaded');
+                        g_cache.loaded[g_id] = true;
+                        if (typeof(callback) == 'function') callback();
+                    },
                     'onStateChange': g_player.onPlayerStateChange
                 }
             });
@@ -36,7 +41,7 @@ var g_player = {
                 g_player.dom.src = g_player.dom.src;
             }
             $.getJSON(g_api + 'search.php?server=youtube&type=id&id=' + id, function(json, textStatus) {
-               saveHistory(id, json);
+                saveHistory(id, json);
 
                 // g_player.dom = $('<audio style="width: 100%;padding: 10px;" controls="controls" src="'+json.url+'" autoplay></audio>').appendTo('.navbar-fixed-bottom')[0];
                 g_player.data = {
@@ -52,16 +57,15 @@ var g_player = {
 
     setPlaybackRate: (rate) => {
         rate = Number(rate);
-        console.log(rate);
-         if(g_player.obj){
+        if (g_player.obj) {
             g_player.obj.setPlaybackRate(rate);
-        }else{
-            g_player.dom.playbackRate = rate; 
+        } else {
+            g_player.dom.playbackRate = rate;
         }
     },
 
-      getPlaybackRate: () => {
-          return g_player.obj ? g_player.obj.getPlaybackRate() : g_player.dom.playbackRate; 
+    getPlaybackRate: () => {
+        return g_player.obj ? g_player.obj.getPlaybackRate() : g_player.dom.playbackRate;
     },
 
     onAudioReady: () => {
@@ -70,10 +74,11 @@ var g_player = {
     },
 
     getDuration: () => {
-          return g_player.obj ? g_player.obj.getDuration() : g_player.dom.duratio; 
+        return g_player.obj ? g_player.obj.getDuration() : g_player.dom.duratio;
     },
 
     initVideo: () => {
+
         saveHistory(g_id, g_player.data);
         g_player.setVolume(100);
         $('input[type=number]').prop('max', g_player.getDuration());
@@ -81,16 +86,12 @@ var g_player = {
         g_player.playVideo();
         g_player.setPlaybackRate(_GET['s'] || 1);
         setTimeout(() => {
-            if(g_player.isPause()){
+            if (g_player.isPause()) {
                 g_player.playVideo();
             }
         }, 4000);
-    },
 
-    onPlayerReady: (event) => {
-        
     },
-
     onPlayerStateChange: (event) => {
         if (event.data == YT.PlayerState.PLAYING) {
             g_player.initTimer();
@@ -98,7 +99,7 @@ var g_player = {
     },
 
     getPlayerData: () => {
-          return g_player.obj ? g_player.obj.getVideoData() : g_player.data; 
+        return g_player.obj ? g_player.obj.getVideoData() : g_player.data;
 
     },
 
@@ -107,10 +108,10 @@ var g_player = {
         g_cache.timer = setInterval(g_player.timeupdate, 300);
     },
     timeupdate: () => {
-       
-        var data =g_player.getPlayerData();
-        if(data.author != '' && g_player.data.author == ''){
-             g_player.data = {
+
+        var data = g_player.getPlayerData();
+        if (data.author != '' && g_player.data.author == '') {
+            g_player.data = {
                 title: data.title,
                 author: data.author,
             }
@@ -121,39 +122,42 @@ var g_player = {
 
         var now = g_player.getCurrentTime();
         var run = $('[data-action="test"]').hasClass('btn-primary');
-        if($('[data-action="play"]').hasClass('btn-secondary')){
-             
+        if ($('[data-action="play"]').hasClass('btn-secondary')) {
+
             var min = getStart();
-            if(min > 0 && now < min){
+            if (min > 0 && now < min) {
                 return g_player.seekTo(min);
             }
             var max = getEnd();
-            if(max > 0 && now > max){
+            if (max > 0 && now > max) {
                 return g_player.seekTo(min);
             }
 
         }
-         if(run && g_cache.range){
-            setProgress(parseInt((g_cache.range.end - now) / g_cache.range.length * 100));
+        var id = g_id;
+        if (run && g_cache.range[g_id]) {
+            setProgress(parseInt((g_cache.range[g_id].end - now) / g_cache.range[g_id].length * 100));
         }
-
-        for (var start in g_cache.subTitlte) {
-            var d = g_cache.subTitlte[start];
+        var data = g_cache.subTitlte;
+        for (var start in data[id]) {
+            var d = data[id][start];
             if (now >= start && now < d.end) {
-                if (g_cache.last == start) return;
-                g_cache.last = start;
-                g_player.toSubtitle(start, d.end);
+                if (g_cache.last == id + '_' + start) return;
+                g_cache.last = id + '_' + start;
+                g_player.toSubtitle(id, start, d.end);
                 return;
             }
         }
-         if(run){
-            next();
-            return;      
+
+        if (run) {
+            if (g_cache.range[g_id] && now > g_cache.range[g_id].end) {
+                return next();
+            }
         }
         $('.playing').removeClass('playing');
     },
-    toSubtitle: (start, end) => {
-        var div = $('[data-start="' + start + '"]');
+    toSubtitle: (id, start, end) => {
+        var div = $('[data-id="' + id + '"][data-start="' + start + '"][data-end="' + end + '"]');
         if (!div.length) return;
         $('.playing').removeClass('playing');
 
@@ -179,7 +183,7 @@ var g_player = {
     },
 
     playVideo: () => {
-       
+
         if (g_player.obj) {
             g_player.obj.playVideo();
         } else {
@@ -193,7 +197,7 @@ var g_player = {
 
     seekTo: (time) => {
         time = parseInt(time);
-        if(time >= g_player.getDuration()) return;
+        if (time >= g_player.getDuration()) return;
         if (g_player.obj) {
             g_player.obj.seekTo(time);
         } else {

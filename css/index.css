@@ -79,3 +79,14 @@ body {
     box-shadow: rgba(0, 0, 0, 0.16) 0px 1px 4px, rgb(51, 51, 51) 0px 0px 0px 3px !important;
 
 }
+
+tr.disabled {
+    color: dimgray;
+}
+
+
+.bg {
+    background-size: 300px 300px;
+    background-position-x: center;
+    background-position-y: center;
+}

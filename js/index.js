@@ -2,6 +2,8 @@
      timer: 0,
      last: 0,
      subTitlte: {},
+     range: {},
+     loaded: {}
  };
  var g_id;
  var _audio = $('#tip')
@@ -45,6 +47,7 @@
                      d.val(s);
                  }
                  g_player.seekTo(s);
+                 showEdit();
                  break;
              case 'end':
                  var s = getStart();
@@ -54,6 +57,8 @@
                      d.val(s);
                  }
                  g_player.seekTo(e);
+                 showEdit();
+
                  break;
          }
      });
@@ -80,8 +85,25 @@
                  break;
          }
      }
+     var data = {};
+     if (_GET['r']) {
+         loadData(window.decodeURIComponent(_GET['r']));
+     } else
+     if (_GET['d']) {
+         $.getJSON(g_api + 'api.php?key=' + _GET['d'], function(json, textStatus) {
+             loadData(json.data);
+         });
+     }
+
      initHistory();
  });
+
+ function showEdit() {
+     var d = $('[data-action="edit"]');
+     if (!d.hasClass('btn-primary')) {
+         d[0].click();
+     }
+ }
 
  function next() {
      var d = $('.playing');
@@ -91,7 +113,7 @@
      var next = d.next();
      if (!next.length) {
          g_player.pause();
-         return toastPAlert('over');
+         return;
      }
      next.click();
  }
@@ -101,23 +123,27 @@
 
  }
 
- function initSubtitle(id, json) {
-
+ function initSubtitle() {
+     var json = g_cache.subTitlte;
      var h = ``;
      var i = 0;
-     for (var start in json) {
-         i++;
-         var d = json[start];
-         h += `<tr data-action="dbclick_subtitle" data-start="` + start + `" data-end="` + d.end + `">
-      <th>` + i + `</th>
-      <td clas="title">` + d.title + `</td>
-      <td class="desc">` + d.desc + `</td>
-      <td class="text-right"> <i data-action="favorite" class="fa fa-lg fa-star` + (d.favorited ? ' text-secondary' : '-o') + `" aria-hidden="true"></i>
-                              </td>
-    </tr>`;
+     for (var id in json) {
+         for (var start in json[id]) {
+             i++;
+             var d = json[id][start];
+             h += `<tr class="` + (id != g_id ? 'disabled' : '') + `" data-action="dbclick_subtitle" data-start="` + start + `" data-end="` + d.end + `" data-id="` + id + `">
+          <th>` + i + `</th>
+          <td class="title">` + d.title + `</td>
+          <td class="desc">` + d.desc + `</td>
+          <td class="text-right"> <i data-action="favorite" class="fa fa-lg fa-star` + (d.favorited ? ' text-secondary' : '-o') + `" aria-hidden="true"></i>
+                                  </td>
+        </tr>`;
+         }
      }
+
      $('tbody').html(h);
  }
+
 
  function saveHistory(id, json = {}) {
      var d = g_config.history[id] ? g_config.history[id] : {};
@@ -132,16 +158,20 @@
  }
 
  function loadData(data) {
-     data = JSON.parse(data);
-     g_data[g_id] = data;
-     local_saveJson('datas', g_data);
+     if (typeof(data) != 'object') data = JSON.parse(data);
+     console.log(data);
+     g_cache.subTitlte = data;
+     g_id = Object.keys(data)[0];
+     g_player.load(g_config.audioMode ? 'audio' : 'video', g_id);
+
+     initSubtitle();
      $('[data-action="test"]').addClass('btn-primary');
-     initSubtitle(g_id, data);
+     $('[data-action="dbclick_subtitle"]:eq(0)').click();
      //window.history.pushState(null, null, window.location.href.split("?")[0]);
 
  }
 
- function onYouTubeIframeAPIReady(id) {
+ function onYouTubeIframeAPIReady(id, callback) {
      // https://www.youtube.com/watch?v=DD1JfUPaPp4
      if (id == '' || id == undefined) {
          id = _GET['i'] ? _GET['i'] : g_config.lastId;
@@ -150,20 +180,12 @@
          local_saveJson('config', g_config);
      }
      g_id = id;
-     var data = {};
-     if (_GET['r']) {
-         loadData(window.decodeURIComponent(_GET['r']));
-     } else
-     if (_GET['d']) {
-         $.getJSON(g_api + 'api.php?key=' + _GET['d'], function(json, textStatus) {
-             loadData(json.data);
-         });
-     } else
      if (g_data[id]) {
-         g_cache.subTitlte = g_data[id];
-         initSubtitle(id, g_data[id]);
+         g_cache.subTitlte[id] = g_data[id];
+         $('[data-action="save"]').removeClass('hide').addClass('btn-primary');
+         initSubtitle();
      }
-     g_player.load(g_config.audioMode ? 'audio' : 'video', id);
+     g_player.load(g_config.audioMode ? 'audio' : 'video', id, callback);
  }
 
  function initHistory() {
@@ -205,7 +227,7 @@
      var start = getStart();
      if (g_cache.selected) {
          if (del || g_cache.selected != start) {
-             delete g_cache.subTitlte[g_cache.selected];
+             delete g_cache.subTitlte[g_id][g_cache.selected];
              g_cache.selected = -1;
          }
      }
@@ -227,6 +249,19 @@
      $('#input_start, #input_end, #input_text, #input_desc').val('');
  }
 
+ function saveData() {
+     g_config.lastData = g_cache.subTitlte;
+     local_saveJson('config', g_config);
+
+     g_data = Object.assign(g_data, g_cache.subTitlte);
+     local_saveJson('datas', g_data);
+     $('[data-action="save"]').addClass('hide').removeClass('btn-primary');
+ }
+
+ function loadLastData() {
+     loadData(g_config.lastData);
+ }
+
  function doAction(dom, action, params) {
      var action = action.split(',');
      if (g_actions[action[0]]) {
@@ -239,7 +274,10 @@
              if (start > end) {
                  return alert('end < start');
              }
-             g_cache.subTitlte[start] = {
+             if (!g_cache.subTitlte[g_id]) {
+                 g_cache.subTitlte[g_id] = {};
+             }
+             g_cache.subTitlte[g_id][start] = {
                  end: end,
                  title: $('#input_text').val(),
                  desc: $('#input_desc').val(),
@@ -250,12 +288,11 @@
              deleteSelected(true);
              break;
          case 'share':
-            getShareurl();
+             getShareurl();
              break;
          case 'save':
-             g_data[g_id] = g_cache.subTitlte;
-             local_saveJson('datas', g_data);
-             $('[data-action="save"]').addClass('hide').removeClass('btn-primary');
+             saveData();
+
              break;
          case 'edit':
              var b = $(dom).toggleClass('btn-primary').hasClass('btn-primary');
@@ -280,26 +317,38 @@
          case 'dbclick_subtitle':
              g_cache.selected = -1;
              var d = $(dom);
+             var id = d.attr('data-id');
              var start = d.attr('data-start');
              var end = d.attr('data-end');
-             g_cache.range = {
+             g_cache.range[id] = {
                  start: start,
                  end: end,
-                 length: end - start
+                 length: end - start,
+                 inited: false,
              }
              $('#input_start').val(start);
              $('#input_end').val(end);
-             $('#input_text').val(d.find('.title').val());
-             $('#input_desc').val(d.find('.desc').val());
+             $('#input_text').val(d.find('.title').html());
+             $('#input_desc').val(d.find('.desc').html());
              $('[data-action="add"] i').removeClass('fa-plus').addClass('fa-check');
              g_cache.selected = start;
-             g_player.toSubtitle(start, end, true);
+             g_player.toSubtitle(id, start, end, true);
+
+             if (id != g_id) {
+                 onYouTubeIframeAPIReady(id, () => {
+                     g_player.seekTo(start);
+                     g_player.playVideo();
+                 });
+                 return;
+             }
+
              g_player.seekTo(start);
              g_player.playVideo();
              break;
 
          case 'confirm_openUrl':
              var url = prompt('input url', 'https://www.youtube.com/watch?v=v22JJP1GBAI');
+             if (url == null) return;
              if (url != '') {
                  var id = cutString(url + '&', '?v=', '&');
                  if (id == '') id = cutString(url + '&', 'youtu.be/', '&');

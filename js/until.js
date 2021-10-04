@@ -2,7 +2,7 @@ String.prototype.replaceAll = function(s1, s2) {
     return this.replace(new RegExp(s1, "gm"), s2);
 }
 var g_api = './php/';
-var g_api = 'https://sharetube-api.glitch.me/';
+// var g_api = 'https://sharetube-api.glitch.me/';
 var _GET = getGETArray();
 var g_localKey = 'shareTube_';
 // 本地储存前缀
@@ -119,7 +119,7 @@ function copyText(text) {
 }
 
 function shareCard(url) {
-    if (!$('#modal-card').length) {
+    if ($('#modal-card').length) $('#modal-card').remove();
         var h = `
         <div class="modal" id="modal-card" tabindex="-1" role="dialog" style="z-index: 99999;">
             <div class="modal-dialog" role="document">
@@ -133,31 +133,36 @@ function shareCard(url) {
 
                           <div class="card p-0"> 
                             
-                          <div class="position-relative">
-                            <img id='share_cover' src="`+ g_api+'image.php?url='+btoa('https://i.ytimg.com/vi/'+g_id+'/mqdefault.jpg')+`" class="img-fluid rounded-top w-full">
-                           
-                            </div>
-                             <span style="position: absolute;right: 10px;top: 10px;" class="badge badge-primary">
+                          <div class="position-relative row" style="    min-height: 300px;">
+                          <span style="position: absolute;right: 10px;top: 10px;z-index: 2;" class="badge badge-primary">
                               <i class="fa fa-clock-o text-white mr-10" aria-hidden="true"></i>{all}
                             </span>
-                            <div class="content">
-                              <h2 class="content-title text-center">
-                                ` + g_player.data.title + `
-                              </h2>
-                              <div class="content position-relative" style="min-height: 128px">
-                                 <div id="qrcode" style="position: absolute;right: 10px;bottom: 5px;"></div>
         `;
         var i = 0;
         var t;
         var all = 0;
-        for (var start in g_cache.subTitlte) {
+        var h1 = '';
+        var data = g_cache.subTitlte;
+        for (var id in data) {
+            h+=`<img id='share_cover' style="background-image: url(`+ g_api+'image.php?url='+btoa('https://i.ytimg.com/vi/'+id+'/mqdefault.jpg')+`)" class="bg col-`+(parseInt(12/Object.keys(data).length))+`">`;
+                            
+        for (var start in data[id]) {
             i++;
-            var d = g_cache.subTitlte[start];
+            var d = data[id][start];
             t = parseInt(d.end-start);
             all += t;
-            h += `<div style="display: inline-flex" contenteditable=true><strong>` + i + '.' + d.title + `</strong><br />` + d.desc + `<span class="badge ml-10">`+getTime(t)+`</span></div><hr />`;
+            h1 += `<div style="display: inline-flex" contenteditable=true><strong>` + i + '.' + d.title + `</strong><br />` + d.desc + `<span class="badge ml-10">`+getTime(t)+`</span></div><hr />`;
         }
-        h += `</div></div></div></div><textarea class="form-control" id="input_copy" disbaled>` + url + `</textarea><div class="btn-group w-full" role="group"><button class="form-control bg-primary btn-block" onclick="generatorImage()">download</button><button class="form-control bg-primary btn-block" onclick="$('#input_copy').select();document.execCommand('copy');halfmoon.toggleModal('modal-copy');">copy</button></div></div></div></div></div>`;
+    }
+
+        h += `</div>
+        <div class="content">
+      <h2 class="content-title text-center" contenteditable=true>
+        ` + g_player.data.title+ `
+      </h2>
+      <div class="content position-relative" style="min-height: 128px">
+         <div id="qrcode" style="position: absolute;right: 10px;bottom: 5px;"></div>
+        `+h1+`</div></div><textarea class="form-control" id="input_copy" disbaled>` + url + `</textarea><div class="btn-group w-full" role="group"><button class="form-control bg-primary btn-block" onclick="generatorImage()">download</button><button class="form-control bg-primary btn-block" onclick="$('#input_copy').select();document.execCommand('copy');halfmoon.toggleModal('modal-copy');">copy</button></div></div></div></div></div></div></div>`;
         $(h.replace('{all}', getTime(all))).appendTo('body');
 
         new QRCode("qrcode", {
@@ -168,12 +173,13 @@ function shareCard(url) {
             colorLight : "#ffffff",
             correctLevel : QRCode.CorrectLevel.H
         });
-    }
     halfmoon.toggleModal('modal-card');
 }
 
 function getShareurl(){
-    var base = location.protocol + '//' + location.host + '/shareTube/youtube.html?i=' + g_id+'&s='+g_player.getPlaybackRate();
+    toastPAlert('loading...', 'alert-secondary');
+    // location.protocol + '//' + location.host + '/
+    var base = 'https://hunmer.github.io/shareTube/youtube.html?i=' + g_id+'&s='+g_player.getPlaybackRate();
     var data = window.encodeURIComponent(JSON.stringify(g_cache.subTitlte));
     if(data.length <= 100){
         return shareCard(base+'&r'+data);

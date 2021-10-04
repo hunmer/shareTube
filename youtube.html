@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
@@ -37,6 +38,11 @@ html {
     height: 100%;
 }
 
+
+.playing {
+    background-color: cornflowerblue;
+}
+
 #progress {
     position: fixed;
     z-index: 99999;
@@ -66,7 +72,7 @@ html {
 }
 
 #ftb_btn {
-    float:  right;
+    float: right;
     text-align: center;
     height: 50px;
     margin-right: 10px;
@@ -93,21 +99,23 @@ html {
     <script src="js/iframe_api.js"></script>
     <script>
     var g_api = './php/';
-    var g_api = 'https://sharetube-api.glitch.me/';
+    // var g_api = 'https://sharetube-api.glitch.me/';
     var _GET = getGETArray();
     var g_player;
     var g_cache = {
         timer: 0,
         ended: false,
         last: 0,
+        loaded: {},
+        range: {},
         subTitlte: {},
     };
+    var g_id;
     var g_index = -1;
     var progress = document.querySelector('#progress');
 
     function onYouTubeIframeAPIReady() {
-        // https://www.youtube.com/watch?v=DD1JfUPaPp4
-        g_id = _GET['i'];
+        console.log('init');
         var data = {};
         if (_GET['r']) {
             loadData(window.decodeURIComponent(_GET['r']));
@@ -128,25 +136,74 @@ html {
         }
     }
 
-    function loadData(data) {
-        data = JSON.parse(data);
-        g_cache.subTitlte = data;
-        initSubtitle(g_id, data);
+    function toSubtitle(id, start, end) {
+        var div = document.querySelector('[data-id="' + id + '"][data-start="' + start + '"][data-end="' + end + '"]');
+        if (!div.length) return;
+        removePlaying();
+        div.classList.add('playing');
     }
 
-    function initSubtitle(id, json) {
-        for (var start in g_cache.subTitlte) {
-            var d = g_cache.subTitlte[start];
-            var li = document.createElement('li');
-            li.innerHTML = d.title;
-            li.title = d.desc;
-            li.setAttribute('start', start)
-            li.onclick = function(event) {
-                g_player.seekTo(this.getAttribute('start'));
-                g_player.playVideo();
+    function loadData(data) {
+        data = JSON.parse(data);
+        console.log('load', data);
+        g_cache.subTitlte = data;
+        initSubtitle();
+        next();
+    }
+
+    // http://127.0.0.1/shareTube/youtube.html?i=Most968yZig&s=1&d=ae4d96e5c1fce8a7689c6e27b38b06e1
+    function initSubtitle() {
+        var data = g_cache.subTitlte;
+        for (var id in data) {
+            for (var start in data[id]) {
+                var d = data[id][start];
+                var li = document.createElement('li');
+                li.innerHTML = d.title;
+                li.title = d.desc;
+                li.setAttribute('data-start', start)
+                li.setAttribute('data-end', d.end)
+                li.setAttribute('data-id', id)
+                li.onclick = function(event) {
+                    var id = this.getAttribute('data-id');
+                    var start = parseInt(this.getAttribute('data-start'));
+                    var end = parseInt(this.getAttribute('data-end'));
+                    g_cache.range[id] = {
+                        start: start,
+                        end: end,
+                        length: end - start,
+                    }
+                    console.log(g_cache.range[id]);
+                    removePlaying();
+                    this.classList.add('playing');
+                    if (id != g_id) {
+                        loadPlayer(id, start, () => {
+                            console.log('seek to', start);
+                            g_player.seekTo(start);
+                            g_player.playVideo();
+                        });
+                        return;
+                    }
+                    g_player.seekTo(start);
+                    g_player.playVideo();
+                }
+                document.querySelector('ul').append(li);
             }
-            document.querySelector('ul').append(li);
         }
+    }
+
+    function removePlaying() {
+        for (var d of document.querySelectorAll('.playing')) {
+            d.classList.remove('playing');
+        }
+    }
+
+    function loadPlayer(id, start, callback) {
+        console.log('load id: ' + id);
+        g_id = id;
+        g_cache.loaded[id] = false;
+        if (g_player) g_player.destroy();
+        if (g_cache.timer) clearInterval(g_cache.timer);
+
         g_player = new YT.Player('player', {
             height: '100%',
             width: '100%',
@@ -155,6 +212,7 @@ html {
             events: {
                 'onReady': () => {
                     g_player.setPlaybackRate(Number(_GET['s']) || 1);
+                    g_player.playVideo();
                     document.title = g_player.getVideoData().title;
                     setTimeout(() => {
                         if (g_player.getPlayerState() == -1) {
@@ -162,55 +220,63 @@ html {
                         }
                     }, 3000);
                     g_cache.timer = setInterval(timeupdate, 300);
-                    next();
+
+                    if (!g_cache.loaded[g_id]) {
+                        g_cache.loaded[g_id] = true;
+                        console.log('loaded');
+                    }
+                    if (typeof(callback) == 'function') callback();
+
                 }
             }
         });
-
     }
 
     function timeupdate() {
-
         var now = g_player.getCurrentTime();
         if (g_cache.range) {
             progress.hidden = false;
             progress.style.width = parseInt((g_cache.range.end - now) / g_cache.range.length * 100) + '%';
         }
+
         var i = 0;
-        for (var start in g_cache.subTitlte) {
-            var d = g_cache.subTitlte[start];
+        var id = g_id;
+        var data = g_cache.subTitlte;
+        for (var start in data[id]) {
+            var d = data[id][start];
             if (now >= start && now < d.end) {
-                if (g_cache.last == start) return;
-                g_cache.last = start;
+                if (g_cache.last == id + '_' + start) return;
+                g_cache.last = id + '_' + start;
                 g_index = i;
+                console.log(i);
+                toSubtitle(id, start, d.end);
                 return;
             }
-            i++;
         }
         progress.hidden = true;
         if (!g_cache.ended) {
-            next();
+            if (now > g_cache.range[g_id].end) {
+                next();
+            }
+
         }
     }
 
     function next() {
-        var times = Object.keys(g_cache.subTitlte);
-        if (g_index == times.length - 1 && !g_cache.ended) {
-            g_cache.ended = true;
+        console.log('next');
+        var d = document.querySelector('.playing');
+        if (!d) {
+            return document.querySelector('[data-start]').click();
+        }
+
+        var next = d.nextElementSibling;
+        if (!next) {
             g_player.pauseVideo();
             return;
         }
-        g_index = g_index + 1;
-        var start = times[g_index];
-        var d = g_cache.subTitlte[start];
-        g_cache.range = {
-            start: start,
-            end: d.end,
-            length: d.end - start
-        }
-        g_player.seekTo(start);
-        g_player.playVideo();
+        next.click();
     }
+
 
     function getGETArray() {
         var a_result = [],
