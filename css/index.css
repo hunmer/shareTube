@@ -90,3 +90,7 @@ tr.disabled {
     background-position-x: center;
     background-position-y: center;
 }
+.bg.col-12{
+    background-size: cover;
+
+}

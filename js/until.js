@@ -143,8 +143,9 @@ function shareCard(url) {
         var all = 0;
         var h1 = '';
         var data = g_cache.subTitlte;
+        var col = parseInt(12/Object.keys(data).length);
         for (var id in data) {
-            h+=`<img id='share_cover' style="background-image: url(`+ g_api+'image.php?url='+btoa('https://i.ytimg.com/vi/'+id+'/mqdefault.jpg')+`)" class="bg col-`+(parseInt(12/Object.keys(data).length))+`">`;
+            h+=`<img id='share_cover' style="background-image: url(`+ g_api+'image.php?url='+btoa('https://i.ytimg.com/vi/'+id+'/mqdefault.jpg')+`)" class="bg col-`+col+`">`;
                             
         for (var start in data[id]) {
             i++;
@@ -162,7 +163,7 @@ function shareCard(url) {
       </h2>
       <div class="content position-relative" style="min-height: 128px">
          <div id="qrcode" style="position: absolute;right: 10px;bottom: 5px;"></div>
-        `+h1+`</div></div><textarea class="form-control" id="input_copy" disbaled>` + url + `</textarea><div class="btn-group w-full" role="group"><button class="form-control bg-primary btn-block" onclick="generatorImage()">download</button><button class="form-control bg-primary btn-block" onclick="$('#input_copy').select();document.execCommand('copy');halfmoon.toggleModal('modal-copy');">copy</button></div></div></div></div></div></div></div>`;
+        `+h1+`</div></div></div><textarea class="form-control" id="input_copy" disbaled>` + url + `</textarea><div class="btn-group w-full" role="group"><button class="form-control bg-primary btn-block" onclick="generatorImage()">download</button><button class="form-control bg-primary btn-block" onclick="$('#input_copy').select();document.execCommand('copy');halfmoon.toggleModal('modal-copy');">copy</button></div></div></div></div></div></div></div>`;
         $(h.replace('{all}', getTime(all))).appendTo('body');
 
         new QRCode("qrcode", {
@@ -232,7 +233,7 @@ function generatorImage(){
     // img.crossOrigin="Anonymous";//解决跨域
     toastPAlert('downloading...', 'alert-secondary');
      var dark = $('.dark-mode').length;
-      html2canvas($('#modal-card .modal-html .mw-full')[0], {
+      html2canvas($('#modal-card .modal-html .card')[0], {
             backgroundColor: dark ? '#000000d9' : '#fff',
             useCORS: true,
         }).then(function(canvas) {
